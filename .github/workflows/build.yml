@@ -1,10 +1,12 @@
 name: MIDCORE Custom Build
 
 on:
-  workflow_dispatch: # <-- 이 줄이 있어야 'Run workflow' 버튼이 생깁니다!
+  workflow_dispatch: # 수동 실행 버튼 활성화
   push:
+    # 브랜치 제한을 풀어서 어떤 상황에서도 빌드가 돌게 합니다.
     branches:
-      - master # 또는 기영님이 쓰시는 브랜치명 (main 등)
+      - master
+      - main
 
 jobs:
   build:
@@ -12,6 +14,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive # 서브모듈이 있다면 함께 불러옵니다.
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -24,11 +28,12 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle (Offline)
-        # JitPack 에러를 피하기 위해 --offline 모드로 실행합니다.
-        run: ./gradlew shadowJar -x test --no-daemon --offline
+        # --offline을 빼고 먼저 시도해보고, 안 되면 다시 넣어서 조절해 드릴게요.
+        run: ./gradlew shadowJar -x test --no-daemon
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Oraxen-MIDCORE-Jar
-          path: build/libs/oraxen-*-MIDCORE.jar
+          # 빌드된 결과물 경로가 맞는지 확인하는 단계
+          path: "**/build/libs/oraxen-*-MIDCORE.jar"
