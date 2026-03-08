@@ -12,90 +12,55 @@ plugins {
     id("io.github.goooler.shadow") version "8.1.8"
 }
 
-class NMSVersion(val nmsVersion: String, val serverVersion: String)
-
-infix fun String.toNms(that: String): NMSVersion = NMSVersion(this, that)
-val isCI = System.getenv("CI") != null
-val SUPPORTED_VERSIONS: List<NMSVersion> = listOfNotNull(
-    "v1_20_R1" toNms "1.20.1-R0.1-SNAPSHOT",
-    "v1_20_R2" toNms "1.20.2-R0.1-SNAPSHOT",
-    "v1_20_R3" toNms "1.20.4-R0.1-SNAPSHOT",
-    "v1_20_R4" toNms "1.20.6-R0.1-SNAPSHOT",
-    "v1_21_R1" toNms "1.21.1-R0.1-SNAPSHOT",
-    "v1_21_R2" toNms "1.21.3-R0.1-SNAPSHOT",
-    "v1_21_R3" toNms "1.21.4-R0.1-SNAPSHOT",
-    "v1_21_R4" toNms "1.21.5-R0.1-SNAPSHOT",
-    "v1_21_R5" toNms "1.21.8-R0.1-SNAPSHOT",
-    "v1_21_R6_old" toNms "1.21.10-R0.1-SNAPSHOT",
-    "v1_21_R6" toNms "1.21.11-R0.1-SNAPSHOT",
-    if (!isCI) "v1_20_R4_spigot" toNms "1.20.6-R0.1-SNAPSHOT" else null
-)
-
-val pluginVersion: String by project
-group = "io.th0rgal"
-version = pluginVersion
+// ... (NMSVersion 및 SUPPORTED_VERSIONS 설정은 동일) ...
 
 allprojects {
     apply(plugin = "java")
 
     repositories {
-        // [수정] 로컬 폴더를 최우선으로 탐색하여 외부 서버 의존성을 끊음
+        // 1순위: 기영님이 직접 넣은 libs 폴더
         flatDir {
             dirs(file("../libs"), file("libs"))
         }
         mavenCentral()
+        
+        // [수정] 기영님이 보내주신 TriumphTeam 공식 스냅샷 저장소 추가
+        maven("https://repo.triumphteam.dev/snapshots") 
+        
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://libraries.minecraft.net/")
         maven("https://repo.oraxen.com/releases")
-        // 불안정한 jitpack.io 주소를 완전히 삭제했습니다.
+        // JitPack은 제외된 상태 유지
     }
 }
 
 dependencies {
-    // [수정] libs 폴더 내의 IF-0.11.6.jar 및 actions-spigot 등을 직접 로드
+    // 로컬 jar 파일 포함 (IF-0.11.6.jar 등)
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     
-    // 코어 및 NMS 프로젝트 의존성
     implementation(project(path = ":core"))
     SUPPORTED_VERSIONS.forEach { 
         implementation(project(path = ":${it.nmsVersion}", configuration = "reobf")) 
     }
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
-    }
-}
+// ... (java 툴체인 및 tasks 설정은 동일) ...
 
 tasks {
-    compileJava {
-        options.encoding = Charsets.UTF_8.name()
-    }
-
-    processResources {
-        filesNotMatching(listOf("**/*.png", "**/*.ogg", "**/plugin.yml")) {
-            expand(mapOf("version" to pluginVersion))
-        }
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    }
-
     shadowJar {
-        // 모든 NMS 모듈을 합칩니다.
         SUPPORTED_VERSIONS.forEach { dependsOn(":${it.nmsVersion}:reobfJar") }
-        
         archiveClassifier.set("")
+        // 기영님의 MIDCORE 서버용 이름으로 저장
         archiveFileName.set("oraxen-${pluginVersion}-MIDCORE.jar")
         
         manifest {
             attributes(mapOf(
                 "Version" to pluginVersion, 
-                "Created-By" to "Lee Ki-young Custom Build",
+                "Created-By" to "Lee Ki-young (MIDCORE)", 
                 "Build-Timestamp" to SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
             ))
         }
     }
-
     build { dependsOn(shadowJar) }
 }
 
