@@ -39,7 +39,7 @@ allprojects {
     apply(plugin = "java")
 
     repositories {
-        // [수정] 로컬 폴더를 1순위로 탐색 (인터넷 다운로드 방지)
+        // [수정] 로컬 폴더를 최우선으로 탐색하여 외부 서버 의존성을 끊음
         flatDir {
             dirs(file("../libs"), file("libs"))
         }
@@ -47,15 +47,19 @@ allprojects {
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://libraries.minecraft.net/")
         maven("https://repo.oraxen.com/releases")
-        // [수정] 불안정한 jitpack.io 제거됨
+        // 불안정한 jitpack.io 주소를 완전히 삭제했습니다.
     }
 }
 
 dependencies {
-    // [수정] libs 폴더 내의 모든 jar 파일을 라이브러리로 인식
+    // [수정] libs 폴더 내의 IF-0.11.6.jar 및 actions-spigot 등을 직접 로드
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+    
+    // 코어 및 NMS 프로젝트 의존성
     implementation(project(path = ":core"))
-    SUPPORTED_VERSIONS.forEach { implementation(project(path = ":${it.nmsVersion}", configuration = "reobf")) }
+    SUPPORTED_VERSIONS.forEach { 
+        implementation(project(path = ":${it.nmsVersion}", configuration = "reobf")) 
+    }
 }
 
 java {
@@ -77,13 +81,18 @@ tasks {
     }
 
     shadowJar {
+        // 모든 NMS 모듈을 합칩니다.
         SUPPORTED_VERSIONS.forEach { dependsOn(":${it.nmsVersion}:reobfJar") }
-        archiveClassifier.set("")
-        archiveFileName.set("oraxen-${pluginVersion}-custom.jar")
         
-        // 쉐이드 설정 유지
+        archiveClassifier.set("")
+        archiveFileName.set("oraxen-${pluginVersion}-MIDCORE.jar")
+        
         manifest {
-            attributes(mapOf("Version" to pluginVersion, "Created-By" to "Lee Ki-young Custom Build"))
+            attributes(mapOf(
+                "Version" to pluginVersion, 
+                "Created-By" to "Lee Ki-young Custom Build",
+                "Build-Timestamp" to SimpleDateFormat("yyyy-MM-dd HH:mm").format(Date())
+            ))
         }
     }
 
