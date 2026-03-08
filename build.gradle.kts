@@ -9,7 +9,7 @@ plugins {
     id("io.github.goooler.shadow") version "8.1.8"
 }
 
-// --- [필수 선언부: 여기서부터는 절대 생략하면 안 됩니다] ---
+// [1. 변수 및 NMS 설정]
 class NMSVersion(val nmsVersion: String, val serverVersion: String)
 infix fun String.toNms(that: String): NMSVersion = NMSVersion(this, that)
 
@@ -30,11 +30,11 @@ val SUPPORTED_VERSIONS: List<NMSVersion> = listOfNotNull(
 )
 
 val pluginVersion: String = project.findProperty("version")?.toString() ?: "1.0.0"
-// -------------------------------------------------------
 
 group = "io.th0rgal"
 version = pluginVersion
 
+// [2. 모든 저장소 통합 관리]
 allprojects {
     apply(plugin = "java")
 
@@ -43,13 +43,24 @@ allprojects {
             dirs(file("../libs"), file("libs"))
         }
         mavenCentral()
-        maven("https://repo.triumphteam.dev/snapshots") 
+        
+        // 필수 API 저장소들
+        maven("https://repo.triumphteam.dev/snapshots")
+        maven("https://repo.lumine.io/repository/maven-public/") // MythicLib, MMOItems
+        maven("https://repo.extendedclip.com/content/repositories/placeholderapi/") // PAPI
+        maven("https://repo.codemc.io/repository/maven-public/") // PacketEvents
+        maven("https://maven.sk89q.com/repo/") // WorldEdit
+        maven("https://repo.skriptlang.org/repo/") // Skript
+        maven("https://repo.auxilor.io/repository/maven-public/") // Eco 관련
+        maven("https://jitpack.io") // Iris 등
+        
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://libraries.minecraft.net/")
         maven("https://repo.oraxen.com/releases")
     }
 }
 
+// [3. 의존성 설정]
 dependencies {
     implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
     implementation(project(path = ":core"))
@@ -64,6 +75,7 @@ java {
     }
 }
 
+// [4. 빌드 작업 정의]
 tasks {
     compileJava {
         options.encoding = Charsets.UTF_8.name()
