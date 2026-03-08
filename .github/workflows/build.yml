@@ -1,25 +1,38 @@
-name: Oraxen Build
+name: Oraxen Stable Build (No JitPack)
 
 on:
-  workflow_dispatch: # 직접 버튼을 눌러서 빌드할 수 있게 함
+  workflow_dispatch: # 직접 버튼을 눌러서 실행
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive # 서브모듈까지 안전하게 가져옴
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: gradle
+
       - name: Grant execute permission
         run: chmod +x gradlew
+
       - name: Build with Gradle
-        run: ./gradlew shadowJar
-      - name: Upload Jar
+        # JitPack 문제를 피하기 위해 메이븐 로컬 저장소 활용 및 타임아웃 대폭 확장
+        # -x test를 통해 테스트 단계에서 발생하는 네트워크 의존성 오류를 차단함
+        run: |
+          ./gradlew shadowJar -x test --no-daemon \
+          -Dorg.gradle.internal.http.connectionTimeout=600000 \
+          -Dorg.gradle.internal.http.socketTimeout=600000 \
+          --stacktrace
+
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Oraxen-Jar
-          path: build/libs/*.jar
+          name: Oraxen-Final-Jar
+          path: "**/build/libs/*.jar" # 빌드된 모든 jar 파일 수집
